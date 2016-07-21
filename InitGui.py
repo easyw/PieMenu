@@ -1726,7 +1726,7 @@ def pieMenuStart():
 
         actionKey = QtGui.QAction(mw)
         actionKey.setObjectName("PieMenuShortCut")
-        actionKey.setShortcut(QtGui.QKeySequence("TAB"))
+        actionKey.setShortcut(QtGui.QKeySequence("Shift+TAB"))  #maui
         actionKey.triggered.connect(PieMenuInstance.showAtMouse)
         mw.addAction(actionKey)
 
