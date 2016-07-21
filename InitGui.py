@@ -79,7 +79,7 @@ def pieMenuStart():
         button.setProperty("ButtonY", 0)
         button.setIconSize(QtCore.QSize(iconSize, iconSize))
         button.setIcon(iconClose)
-        button.setGeometry(0, 0, buttonSize, buttonSize)
+        button.setGeometry(0, 0, buttonSize*1.6, buttonSize*1.3)
         button.setPopupMode(QtGui.QToolButton
                             .ToolButtonPopupMode.DelayedPopup)
 
@@ -405,9 +405,9 @@ def pieMenuStart():
                 button.setAttribute(QtCore.Qt.WA_Hover)
                 button.setDefaultAction(commands[commands.index(i)])
 
-                button.setGeometry(0, 0, buttonSize, buttonSize)
+                button.setGeometry(0, 0, buttonSize*1.3, buttonSize)
 
-                button.setIconSize(QtCore.QSize(iconSize, iconSize))
+                button.setIconSize(QtCore.QSize(iconSize-4, iconSize-4))
                 button.setProperty("ButtonX", self.radius *
                                    (math.cos(angle * num + angleStart)))
                 button.setProperty("ButtonY", self.radius *
