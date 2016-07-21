@@ -35,7 +35,9 @@ def pieMenuStart():
     styleButton = ("""
         QToolButton {
             background-color: lightGray;
-            border: none;
+            border: 1px darkGray;
+            border-radius: 6px;
+            border-style: outset;
         }
 
         QToolButton:disabled {
