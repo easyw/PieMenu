@@ -27,6 +27,7 @@
 def pieMenuStart():
     import math
     import operator
+    import platform
     import FreeCAD as App
     import FreeCADGui as Gui
     from PySide import QtCore
@@ -35,9 +36,7 @@ def pieMenuStart():
     styleButton = ("""
         QToolButton {
             background-color: lightGray;
-            border: 1px darkGray;
-            border-radius: 6px;
-            border-style: outset;
+            border: 1px outset silver;
         }
 
         QToolButton:disabled {
@@ -52,7 +51,14 @@ def pieMenuStart():
             background-color: lightGreen;
         }
 
+        QToolButton::menu-indicator {
+            subcontrol-origin: padding;
+            subcontrol-position: center center;
+        }
+
         """)
+
+    styleContainer = ("QMenu{background: transparent;}") # box-shadow: none;}")
 
     styleCombo = ("""
         QComboBox {
@@ -67,21 +73,59 @@ def pieMenuStart():
     iconClose = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton)
 
 
-    def quickMenu(iconSize=24, buttonSize=28):
+    def radiusSize(buttonSize):
+
+        radius = str(buttonSize / 2)
+
+        return "QToolButton {border-radius: " + radius + "px}"
+
+
+    def iconSize(buttonSize):
+
+        icon = buttonSize / 1.8 # 3 * 2
+ 
+        return icon
+
+
+    def closeButton(buttonSize=42):
+
+        icon = iconSize(buttonSize)
+        radius = radiusSize(buttonSize)
+
+        button = QtGui.QToolButton()
+        button.setProperty("ButtonX", 0)
+        button.setProperty("ButtonY", 0)
+        button.setGeometry(0, 0, buttonSize, buttonSize)
+        button.setIconSize(QtCore.QSize(icon, icon))
+        button.setIcon(iconClose)
+        button.setStyleSheet(styleButton + radius)
+        button.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+        def onButton():
+
+            PieMenuInstance.hide()
+
+        button.clicked.connect(onButton)
+
+        return button
+
+
+    def quickMenu(buttonSize=20):
+
+        radius = radiusSize(buttonSize)
 
         menu = QtGui.QMenu()
         menu.setStyleSheet(styleQuickMenu)
 
         button = QtGui.QToolButton()
         button.setMenu(menu)
-        button.setStyleSheet(styleButton)
         button.setProperty("ButtonX", 0)
-        button.setProperty("ButtonY", 0)
-        button.setIconSize(QtCore.QSize(iconSize, iconSize))
-        button.setIcon(iconClose)
-        button.setGeometry(0, 0, buttonSize*1.6, buttonSize*1.3)
+        button.setProperty("ButtonY", 32)
+        button.setGeometry(0, 0, buttonSize, buttonSize)
+        button.setStyleSheet(styleButton + radius)
+        button.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         button.setPopupMode(QtGui.QToolButton
-                            .ToolButtonPopupMode.DelayedPopup)
+                            .ToolButtonPopupMode.InstantPopup)
 
         menuMode = QtGui.QMenu()
         menuMode.setTitle("Trigger")
@@ -142,17 +186,12 @@ def pieMenuStart():
 
         setChecked()
 
-        def onButton():
-
-            PieMenuInstance.showAtMouse()
-
-        button.clicked.connect(onButton)
-
         def onModeGroup():
             paramGet = App.ParamGet("User parameter:BaseApp/PieMenu")
             text = modeGroup.checkedAction().data()
             paramGet.SetString("TriggerMode", text)
 
+            PieMenuInstance.hide()
             PieMenuInstance.showAtMouse()
 
         modeGroup.triggered.connect(onModeGroup)
@@ -222,8 +261,7 @@ def pieMenuStart():
             text = pieGroup.checkedAction().text().encode("UTF-8")
             paramGet.SetString("CurrentPie", text)
 
-            updateCommands()
-
+            PieMenuInstance.hide()
             PieMenuInstance.showAtMouse()
 
         pieGroup.triggered.connect(onPieGroup)
@@ -281,16 +319,15 @@ def pieMenuStart():
             text = toolbarGroup.checkedAction().data()
             paramGet.SetString("ToolBar", text)
 
-            updateCommands()
-
+            PieMenuInstance.hide()
             PieMenuInstance.showAtMouse()
 
         toolbarGroup.triggered.connect(onToolbarGroup)
 
         def onPrefButton():
 
+            PieMenuInstance.hide()
             onControl()
-            PieMenuInstance.showAtMouse()
 
         prefButton.clicked.connect(onPrefButton)
 
@@ -317,19 +354,22 @@ def pieMenuStart():
             if self.defaultAction().isEnabled() and mode == "Hover":
                 PieMenuInstance.hide()
                 self.defaultAction().trigger()
-                PieMenuInstance.showAtMouse()
             else:
                 pass
 
+        #def mousePressEvent(self, QMouseEvent):
+        #    #print mouse position
+        #    print QMouseEvent.pos()
+        
+        #def mousePressEvent(self, QMouseEvent):
         def mousePressEvent(self, event):
+            #print event.pos()
             paramGet = App.ParamGet("User parameter:BaseApp/PieMenu")
-
             mode = paramGet.GetString("TriggerMode")
 
             if self.defaultAction().isEnabled() and mode != "Hover":
                 PieMenuInstance.hide()
                 self.defaultAction().trigger()
-                PieMenuInstance.showAtMouse()
             else:
                 pass
 
@@ -339,9 +379,20 @@ def pieMenuStart():
         def __init__(self):
 
             self.radius = 100
-            self.buttonSize = 24
             self.buttons = []
-            self.visible = False
+            self.buttonSize = 32
+            self.menu = QtGui.QMenu(mw)
+            self.menuSize = 0
+            self.menu.setStyleSheet(styleContainer)
+            #self.menu.setWindowFlags(self.menu.windowFlags() | QtCore.Qt.FramelessWindowHint ) #std
+            self.menu.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.FramelessWindowHint | QtCore.Qt.Tool )
+            #self.menu.setWindowFlags(QtCore.Qt.Popup | QtCore.Qt.FramelessWindowHint)
+            self.menu.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+            if compositingManager:
+                pass
+            else:
+                self.menu.setAttribute(QtCore.Qt.WA_PaintOnScreen)
 
         def add_commands(self, commands, context=False):
             paramGet = App.ParamGet("User parameter:BaseApp/PieMenu")
@@ -366,7 +417,7 @@ def pieMenuStart():
 
             if paramGet.GetBool("ToolBar"):
                 valueRadius = 100
-                valueButton = 24
+                valueButton = 32
 
             if valueRadius:
                 self.radius = valueRadius
@@ -376,7 +427,7 @@ def pieMenuStart():
             if valueButton:
                 self.buttonSize = valueButton
             else:
-                self.buttonSize = 24
+                self.buttonSize = 32
 
             if commandNumber == 1:
                 angle = 0
@@ -393,21 +444,31 @@ def pieMenuStart():
             else:
                 pass
 
-            iconSize = buttonSize - 4
+            radius = radiusSize(buttonSize)
+            icon = iconSize(buttonSize)
+
+            self.menuSize = valueRadius * 2 + buttonSize + 4
+
+            if self.menuSize < 90:
+                self.menuSize = 90
+            else:
+                pass
+
+            self.menu.setMinimumWidth(self.menuSize)
+            self.menu.setMinimumHeight(self.menuSize)
 
             num = 1
 
             for i in commands:
 
                 button = HoverButton()
-                button.setParent(mw)
-                button.setStyleSheet(styleButton)
+                button.setParent(self.menu)
                 button.setAttribute(QtCore.Qt.WA_Hover)
+                button.setStyleSheet(styleButton + radius)
+                button.setAttribute(QtCore.Qt.WA_TranslucentBackground)
                 button.setDefaultAction(commands[commands.index(i)])
-
-                button.setGeometry(0, 0, buttonSize*1.3, buttonSize)
-
-                button.setIconSize(QtCore.QSize(iconSize-4, iconSize-4))
+                button.setGeometry(0, 0, buttonSize, buttonSize)
+                button.setIconSize(QtCore.QSize(icon, icon))
                 button.setProperty("ButtonX", self.radius *
                                    (math.cos(angle * num + angleStart)))
                 button.setProperty("ButtonY", self.radius *
@@ -417,48 +478,54 @@ def pieMenuStart():
 
                 num = num + 1
 
-            button = quickMenu()
-            button.setParent(mw)
-            self.buttons.append(button)
+            buttonQuickMenu = quickMenu()
+            buttonQuickMenu.setParent(self.menu)
+            self.buttons.append(buttonQuickMenu)
+
+            buttonClose = closeButton()
+            buttonClose.setParent(self.menu)
+            self.buttons.append(buttonClose)
+
+            if compositingManager:
+                pass
+            else:
+                for i in self.buttons:
+                    i.setAttribute(QtCore.Qt.WA_PaintOnScreen)
 
         def hide(self):
 
             for i in self.buttons:
-                i.setVisible(False)
+                i.hide()
+
+            self.menu.hide()
 
         def showAtMouse(self):
-
-            pos = mw.mapFromGlobal(QtGui.QCursor.pos())
             paramGet = App.ParamGet("User parameter:BaseApp/PieMenu")
-
-            def showHide():
-                if self.visible:
-                    for i in self.buttons:
-                        i.setVisible(False)
-                else:
-                    for i in self.buttons:
-                        i.move(i.property("ButtonX") + pos.x() -
-                               i.size().width() / 2,
-                               i.property("ButtonY") + pos.y() -
-                               i.size().height() / 2)
-                        i.setVisible(True)
 
             contextPhase = paramGet.GetBool("ContextPhase")
 
-            def togleVisible():
-                if self.visible:
-                    self.visible = False
-                else:
-                    self.visible = True
-
             if contextPhase:
+                self.hide()
                 paramGet.SetBool("ContextPhase", 0)
-                togleVisible()
-                showHide()
             else:
                 updateCommands()
-                togleVisible()
-                showHide()
+
+            pos = QtGui.QCursor.pos()
+
+            if self.menu.isVisible():
+
+                self.hide()
+
+            else:
+
+                for i in self.buttons:
+                    i.move(i.property("ButtonX") + (self.menuSize - i.size().width()) / 2,
+                           i.property("ButtonY") + (self.menuSize - i.size().height()) / 2)
+
+                    i.setVisible(True)
+
+                self.menu.popup(QtCore.QPoint(pos.x() - self.menuSize / 2, pos.y() - self.menuSize / 2))
+
 
     sign = {
         "<": operator.lt,
@@ -605,6 +672,7 @@ def pieMenuStart():
 
             updateCommands(context=True)
 
+            PieMenuInstance.hide()
             PieMenuInstance.showAtMouse()
         else:
             pass
@@ -1554,7 +1622,7 @@ def pieMenuStart():
         if valueButton:
             pass
         else:
-            valueButton = 24
+            valueButton = 32
             group.SetInt("Button", valueButton)
 
         spinButton.setValue(valueButton)
@@ -1570,7 +1638,7 @@ def pieMenuStart():
         defaultTools = ["Std_ViewTop",
                         "Std_New",
                         "Std_ViewRight",
-                        "Std_ViewBoxZoom",
+                        "Std_BoxSelection",
                         "Std_ViewBottom",
                         "Std_ViewAxo",
                         "Std_ViewLeft",
@@ -1609,6 +1677,10 @@ def pieMenuStart():
         paramGet.SetBool("ToolBar", False)
         paramGet.SetString("CurrentPie", "Default")
 
+        group = getGroup(mode=1)
+
+        group.SetInt("Radius", 100)
+        group.SetInt("Button", 32)
 
     def onControl():
 
@@ -1717,6 +1789,17 @@ def pieMenuStart():
             pass
 
     if start:
+
+        compositingManager = True
+
+        if platform.system() == "Linux":
+            if not QtGui.QX11Info.isCompositingManagerRunning():
+                compositingManager = False
+            else:
+                pass
+        else:
+            pass
+
         contextAll = {}
         contextList()
         selObserver = SelObserver()
@@ -1726,13 +1809,10 @@ def pieMenuStart():
 
         actionKey = QtGui.QAction(mw)
         actionKey.setObjectName("PieMenuShortCut")
-        actionKey.setShortcut(QtGui.QKeySequence("Shift+TAB"))  #maui
+        actionKey.setShortcut(QtGui.QKeySequence("Shift+TAB"))
         actionKey.triggered.connect(PieMenuInstance.showAtMouse)
         mw.addAction(actionKey)
 
-        updateCommands()
-
-        PieMenuInstance.showAtMouse()
     else:
         pass
 
