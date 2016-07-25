@@ -58,7 +58,20 @@ def pieMenuStart():
 
         """)
 
-    styleContainer = ("QMenu{background: transparent;}") # box-shadow: none;}")
+    styleMenuClose = ("""
+        QToolButton {
+            background-color: rgba(60,60,60,235);
+            border: 1px solid #1e1e1e;
+        }
+
+        QToolButton::menu-indicator {
+            subcontrol-origin: padding;
+            subcontrol-position: center center;
+        }
+
+        """)
+
+    styleContainer = ("QMenu{background: transparent}")
 
     styleCombo = ("""
         QComboBox {
@@ -82,8 +95,8 @@ def pieMenuStart():
 
     def iconSize(buttonSize):
 
-        icon = buttonSize / 1.8 # 3 * 2
- 
+        icon = buttonSize /  1.8 # 3 * 2
+
         return icon
 
 
@@ -98,7 +111,7 @@ def pieMenuStart():
         button.setGeometry(0, 0, buttonSize, buttonSize)
         button.setIconSize(QtCore.QSize(icon, icon))
         button.setIcon(iconClose)
-        button.setStyleSheet(styleButton + radius)
+        button.setStyleSheet(styleMenuClose + radius)
         button.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         def onButton():
@@ -122,7 +135,7 @@ def pieMenuStart():
         button.setProperty("ButtonX", 0)
         button.setProperty("ButtonY", 32)
         button.setGeometry(0, 0, buttonSize, buttonSize)
-        button.setStyleSheet(styleButton + radius)
+        button.setStyleSheet(styleMenuClose + radius)
         button.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         button.setPopupMode(QtGui.QToolButton
                             .ToolButtonPopupMode.InstantPopup)
@@ -357,13 +370,7 @@ def pieMenuStart():
             else:
                 pass
 
-        #def mousePressEvent(self, QMouseEvent):
-        #    #print mouse position
-        #    print QMouseEvent.pos()
-        
-        #def mousePressEvent(self, QMouseEvent):
         def mousePressEvent(self, event):
-            #print event.pos()
             paramGet = App.ParamGet("User parameter:BaseApp/PieMenu")
             mode = paramGet.GetString("TriggerMode")
 
@@ -384,9 +391,7 @@ def pieMenuStart():
             self.menu = QtGui.QMenu(mw)
             self.menuSize = 0
             self.menu.setStyleSheet(styleContainer)
-            #self.menu.setWindowFlags(self.menu.windowFlags() | QtCore.Qt.FramelessWindowHint ) #std
-            self.menu.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.FramelessWindowHint | QtCore.Qt.Tool )
-            #self.menu.setWindowFlags(QtCore.Qt.Popup | QtCore.Qt.FramelessWindowHint)
+            self.menu.setWindowFlags(self.menu.windowFlags() | QtCore.Qt.FramelessWindowHint)
             self.menu.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
             if compositingManager:
@@ -447,15 +452,18 @@ def pieMenuStart():
             radius = radiusSize(buttonSize)
             icon = iconSize(buttonSize)
 
-            self.menuSize = valueRadius * 2 + buttonSize + 4
-
-            if self.menuSize < 90:
-                self.menuSize = 90
-            else:
+            if windowShadow:
                 pass
+            else:
+                self.menuSize = valueRadius * 2 + buttonSize + 4
 
-            self.menu.setMinimumWidth(self.menuSize)
-            self.menu.setMinimumHeight(self.menuSize)
+                if self.menuSize < 90:
+                    self.menuSize = 90
+                else:
+                    pass
+
+                self.menu.setMinimumWidth(self.menuSize)
+                self.menu.setMinimumHeight(self.menuSize)
 
             num = 1
 
@@ -510,21 +518,33 @@ def pieMenuStart():
             else:
                 updateCommands()
 
-            pos = QtGui.QCursor.pos()
-
             if self.menu.isVisible():
-
                 self.hide()
-
             else:
+                if windowShadow:
+                    pos = mw.mapFromGlobal(QtGui.QCursor.pos())
 
-                for i in self.buttons:
-                    i.move(i.property("ButtonX") + (self.menuSize - i.size().width()) / 2,
-                           i.property("ButtonY") + (self.menuSize - i.size().height()) / 2)
+                    self.menu.popup(QtCore.QPoint(mw.pos()))
+                    self.menu.setGeometry(mw.geometry())
 
-                    i.setVisible(True)
+                    for i in self.buttons:
+                        i.move(i.property("ButtonX") + pos.x() - i.width() / 2,
+                               i.property("ButtonY") + pos.y() - i.height() / 2)
 
-                self.menu.popup(QtCore.QPoint(pos.x() - self.menuSize / 2, pos.y() - self.menuSize / 2))
+                        i.setVisible(True)
+
+                    for i in self.buttons:
+                        i.repaint()
+                else:
+                    pos = QtGui.QCursor.pos()
+
+                    for i in self.buttons:
+                        i.move(i.property("ButtonX") + (self.menuSize - i.size().width()) / 2,
+                               i.property("ButtonY") + (self.menuSize - i.size().height()) / 2)
+
+                        i.setVisible(True)
+
+                    self.menu.popup(QtCore.QPoint(pos.x() - self.menuSize / 2, pos.y() - self.menuSize / 2))
 
 
     sign = {
@@ -1791,12 +1811,18 @@ def pieMenuStart():
     if start:
 
         compositingManager = True
+        windowShadow = False
 
         if platform.system() == "Linux":
-            if not QtGui.QX11Info.isCompositingManagerRunning():
-                compositingManager = False
+            if QtGui.QX11Info.isCompositingManagerRunning():
+                windowShadow = True
             else:
-                pass
+                compositingManager = False
+        else:
+            pass
+
+        if platform.system() == "Windows":
+            windowShadow = True
         else:
             pass
 
@@ -1809,7 +1835,7 @@ def pieMenuStart():
 
         actionKey = QtGui.QAction(mw)
         actionKey.setObjectName("PieMenuShortCut")
-        actionKey.setShortcut(QtGui.QKeySequence("Shift+TAB"))
+        actionKey.setShortcut(QtGui.QKeySequence("TAB"))
         actionKey.triggered.connect(PieMenuInstance.showAtMouse)
         mw.addAction(actionKey)
 
